@@ -1,0 +1,16 @@
+{
+    "model_name": "XGBoost",
+    "training_date": "2026-01-13T23:23:37.629352",
+    "metrics": {
+        "accuracy": 0.7927608232789212,
+        "precision": 0.6051282051282051,
+        "recall": 0.6310160427807486,
+        "f1_score": 0.6178010471204188,
+        "roc_auc": 0.8434240099201737,
+        "specificity": 0.851207729468599,
+        "false_positive_rate": 0.14879227053140096,
+        "false_negative_rate": 0.3689839572192513,
+        "expected_cost": 15340
+    },
+    "features_count": 19
+}

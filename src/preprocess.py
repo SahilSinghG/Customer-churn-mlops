@@ -6,7 +6,7 @@ import joblib
 import os
 
 class DataPreprocessor:
-    """Handles all data preprocessing for churn prediction"""
+    """Handles all data preprocessing for churn prediction - COMPLETE FIXED VERSION"""
     
     def __init__(self):
         self.label_encoders = {}
@@ -39,10 +39,10 @@ class DataPreprocessor:
         return df_clean
     
     def encode_categorical(self, df, fit=True):
-        """Encode categorical variables"""
+        """Encode ALL categorical variables - COMPLETE FIXED VERSION"""
         df_encoded = df.copy()
         
-        # Binary encode yes/no columns
+        # ===== 1. BINARY COLUMNS (Yes/No) =====
         binary_cols = ['Partner', 'Dependents', 'PhoneService', 
                       'PaperlessBilling', 'Churn']
         
@@ -50,24 +50,88 @@ class DataPreprocessor:
             if col in df_encoded.columns:
                 df_encoded[col] = df_encoded[col].map({'Yes': 1, 'No': 0})
         
-        # Label encode other categorical columns (simplified for Windows)
-        categorical_cols = ['gender', 'Contract', 'PaymentMethod']
+        # ===== 2. COLUMNS WITH "No internet service" =====
+        internet_service_cols = ['OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
+                               'TechSupport', 'StreamingTV', 'StreamingMovies']
         
-        for col in categorical_cols:
+        for col in internet_service_cols:
             if col in df_encoded.columns:
-                if fit:
-                    le = LabelEncoder()
-                    df_encoded[col] = le.fit_transform(df_encoded[col].astype(str))
-                    self.label_encoders[col] = le
-                else:
-                    if col in self.label_encoders:
-                        le = self.label_encoders[col]
-                        # Transform with handling unseen labels
-                        df_encoded[col] = df_encoded[col].apply(
-                            lambda x: le.transform([str(x)])[0] 
-                            if str(x) in le.classes_ 
-                            else -1
-                        )
+                df_encoded[col] = df_encoded[col].map({
+                    'No': 0,
+                    'Yes': 1,
+                    'No internet service': 0
+                })
+        
+        # ===== 3. MULTIPLE LINES =====
+        if 'MultipleLines' in df_encoded.columns:
+            df_encoded['MultipleLines'] = df_encoded['MultipleLines'].map({
+                'No': 0,
+                'Yes': 1,
+                'No phone service': 0
+            })
+        
+        # ===== 4. INTERNET SERVICE =====
+        if 'InternetService' in df_encoded.columns:
+            if fit:
+                le = LabelEncoder()
+                df_encoded['InternetService'] = le.fit_transform(df_encoded['InternetService'])
+                self.label_encoders['InternetService'] = le
+            else:
+                if 'InternetService' in self.label_encoders:
+                    le = self.label_encoders['InternetService']
+                    df_encoded['InternetService'] = df_encoded['InternetService'].apply(
+                        lambda x: le.transform([x])[0] if x in le.classes_ else -1
+                    )
+        
+        # ===== 5. CONTRACT =====
+        if 'Contract' in df_encoded.columns:
+            if fit:
+                le = LabelEncoder()
+                df_encoded['Contract'] = le.fit_transform(df_encoded['Contract'])
+                self.label_encoders['Contract'] = le
+            else:
+                if 'Contract' in self.label_encoders:
+                    le = self.label_encoders['Contract']
+                    df_encoded['Contract'] = df_encoded['Contract'].apply(
+                        lambda x: le.transform([x])[0] if x in le.classes_ else -1
+                    )
+        
+        # ===== 6. PAYMENT METHOD =====
+        if 'PaymentMethod' in df_encoded.columns:
+            if fit:
+                le = LabelEncoder()
+                df_encoded['PaymentMethod'] = le.fit_transform(df_encoded['PaymentMethod'])
+                self.label_encoders['PaymentMethod'] = le
+            else:
+                if 'PaymentMethod' in self.label_encoders:
+                    le = self.label_encoders['PaymentMethod']
+                    df_encoded['PaymentMethod'] = df_encoded['PaymentMethod'].apply(
+                        lambda x: le.transform([x])[0] if x in le.classes_ else -1
+                    )
+        
+        # ===== 7. GENDER =====
+        if 'gender' in df_encoded.columns:
+            if fit:
+                le = LabelEncoder()
+                df_encoded['gender'] = le.fit_transform(df_encoded['gender'])
+                self.label_encoders['gender'] = le
+            else:
+                if 'gender' in self.label_encoders:
+                    le = self.label_encoders['gender']
+                    df_encoded['gender'] = df_encoded['gender'].apply(
+                        lambda x: le.transform([x])[0] if x in le.classes_ else -1
+                    )
+        
+        # ===== 8. SENIOR CITIZEN (already numeric but ensure int) =====
+        if 'SeniorCitizen' in df_encoded.columns:
+            df_encoded['SeniorCitizen'] = df_encoded['SeniorCitizen'].astype(int)
+        
+        # ===== 9. TENURE, MONTHLY CHARGES, TOTAL CHARGES (already numeric) =====
+        # Just ensure they're float
+        numeric_cols = ['tenure', 'MonthlyCharges', 'TotalCharges']
+        for col in numeric_cols:
+            if col in df_encoded.columns:
+                df_encoded[col] = df_encoded[col].astype(float)
         
         return df_encoded
     
@@ -75,16 +139,22 @@ class DataPreprocessor:
         """Scale numerical features"""
         numerical_cols = ['tenure', 'MonthlyCharges', 'TotalCharges']
         
-        if fit:
-            scaled_features = self.scaler.fit_transform(df[numerical_cols])
+        # Check which numeric columns exist
+        existing_numeric_cols = [col for col in numerical_cols if col in df.columns]
+        
+        if existing_numeric_cols:
+            if fit:
+                scaled_features = self.scaler.fit_transform(df[existing_numeric_cols])
+            else:
+                scaled_features = self.scaler.transform(df[existing_numeric_cols])
+            
+            # Create new DataFrame with scaled features
+            df_scaled = df.copy()
+            df_scaled[existing_numeric_cols] = scaled_features
+            
+            return df_scaled
         else:
-            scaled_features = self.scaler.transform(df[numerical_cols])
-        
-        # Create new DataFrame with scaled features
-        df_scaled = df.copy()
-        df_scaled[numerical_cols] = scaled_features
-        
-        return df_scaled
+            return df
     
     def prepare_features_target(self, df):
         """Split into features and target"""
@@ -116,7 +186,8 @@ class DataPreprocessor:
         artifacts = {
             'label_encoders': self.label_encoders,
             'scaler': self.scaler,
-            'feature_columns': self.feature_columns
+            'feature_columns': self.feature_columns,
+            'target_column': self.target_column
         }
         joblib.dump(artifacts, filepath)
         print(f"Preprocessor saved to: {filepath}")
@@ -127,12 +198,13 @@ class DataPreprocessor:
         self.label_encoders = artifacts['label_encoders']
         self.scaler = artifacts['scaler']
         self.feature_columns = artifacts['feature_columns']
+        self.target_column = artifacts.get('target_column', 'Churn')
         print(f"Preprocessor loaded from: {filepath}")
 
 def main():
     """Main preprocessing pipeline"""
     print("="*50)
-    print("DATA PREPROCESSING PIPELINE")
+    print("DATA PREPROCESSING PIPELINE - COMPLETE VERSION")
     print("="*50)
     
     # Initialize preprocessor
@@ -147,6 +219,21 @@ def main():
     
     # Encode categorical variables
     df_encoded = preprocessor.encode_categorical(df_clean, fit=True)
+    
+    # Verify all columns are numeric
+    print("\n" + "="*50)
+    print("VERIFYING DATA TYPES")
+    print("="*50)
+    print("Data types after encoding:")
+    print(df_encoded.dtypes)
+    
+    non_numeric_cols = df_encoded.select_dtypes(include=['object']).columns
+    if len(non_numeric_cols) > 0:
+        print(f"\nWARNING: Non-numeric columns found: {list(non_numeric_cols)}")
+        for col in non_numeric_cols:
+            print(f"  {col}: {df_encoded[col].unique()[:10]}")
+    else:
+        print("\nSUCCESS: All columns are numeric!")
     
     # Scale features
     df_scaled = preprocessor.scale_features(df_encoded, fit=True)
@@ -171,11 +258,22 @@ def main():
     preprocessor.save_preprocessor("models/preprocessor.joblib")
     
     print("\n" + "="*50)
-    print("PREPROCESSING COMPLETE")
+    print("PREPROCESSING COMPLETE - ALL COLUMNS NUMERIC")
     print("="*50)
     print(f"Training data saved: data/processed/train_data.csv")
     print(f"Testing data saved: data/processed/test_data.csv")
     print(f"Preprocessor saved: models/preprocessor.joblib")
+    
+    # Final verification
+    print("\n" + "="*50)
+    print("FINAL VERIFICATION")
+    print("="*50)
+    print("Training data sample (first 3 rows):")
+    print(train_data.head(3))
+    print("\nTraining data info:")
+    print(f"Shape: {train_data.shape}")
+    print(f"Columns: {list(train_data.columns)}")
+    print(f"Data types: \n{train_data.dtypes}")
     
     return preprocessor, X_train, X_test, y_train, y_test
 
