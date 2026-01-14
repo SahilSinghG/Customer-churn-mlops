@@ -10,18 +10,31 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    # 1. Checkout the code
     - name: Checkout code
       uses: actions/checkout@v4
     
+    # 2. Set up Docker Buildx
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
     
+    # 3. DEBUG: Show what's in the username secret (you can remove this later)
+    - name: Debug - Check username
+      run: |
+        echo "Username secret exists: ${{ secrets.DOCKERHUB_USERNAME != '' }}"
+        echo "Username length: ${#USERNAME}"
+        echo "Username value: '${USERNAME}'"
+      env:
+        USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+    
+    # 4. Login to Docker Hub (using your NEW credentials)
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_TOKEN }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     
+    # 5. Build and push the Docker image
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -29,12 +42,12 @@ jobs:
         file: ./docker/Dockerfile
         push: true
         tags: |
-          ${{ secrets.DOCKER_USERNAME }}/churn-api:latest
-          ${{ secrets.DOCKER_USERNAME }}/churn-api:${{ github.sha }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/churn-api:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/churn-api:${{ github.sha }}
     
+    # 6. Optional: Deploy step (runs only for version tags)
     - name: Deploy to AWS (example)
       if: startsWith(github.ref, 'refs/tags/v')
       run: |
         echo "Deploying version ${{ github.ref }} to production"
-        # Add your deployment commands here
-        # Example: kubectl apply, terraform apply, etc.
+        # Add your actual deployment commands here
