@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import uvicorn
 from src.predict import predictor
-import json
 from datetime import datetime
 
 # Initialize FastAPI

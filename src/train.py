@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import mlflow
 import mlflow.sklearn
 from sklearn.linear_model import LogisticRegression
@@ -15,9 +14,7 @@ from sklearn.metrics import (
     confusion_matrix,
     classification_report,
 )
-from sklearn.model_selection import cross_val_score, StratifiedKFold
 from imblearn.over_sampling import SMOTE
-from imblearn.pipeline import Pipeline as ImbPipeline
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -355,7 +352,7 @@ def main():
     comparison_df = trainer.compare_models()
 
     # Save best model
-    best_model_path = trainer.save_best_model()
+    trainer.save_best_model()
 
     print("\n" + "=" * 60)
     print("TRAINING COMPLETE!")
