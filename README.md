@@ -218,7 +218,7 @@ Push to branch (git push origin feature/AmazingFeature)
 
 Open a Pull Request
 
-🙏 Acknowledgments
+Acknowledgments
 Dataset: IBM Telco Customer Churn
 
 Inspired by MLOps best practices
